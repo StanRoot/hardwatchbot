@@ -1,1 +1,4 @@
-# hardwatchbot
+# HardWatchBot
+
+Telegram-бот для мониторинга и управления домашней IT-инфраструктурой.
+
