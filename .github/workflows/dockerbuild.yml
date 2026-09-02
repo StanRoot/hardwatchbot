@@ -63,6 +63,7 @@ jobs:
         run: |
           echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
 
+
   deploy:
     runs-on: ubuntu-latest
     needs: build
@@ -75,23 +76,28 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+
         run: |
+          IMAGE="${IMAGE,,}"
+
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
           ssh-keyscan -p 21022 -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
           echo "$GHCR_TOKEN" | ssh \
             -i ~/.ssh/id_ed25519 \
+            -o IdentitiesOnly=yes \
             -p 21022 \
             deployer@"$SSH_HOST" \
             "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
 
           ssh \
             -i ~/.ssh/id_ed25519 \
+            -o IdentitiesOnly=yes \
             -p 21022 \
             deployer@"$SSH_HOST" \
             "IMAGE='$IMAGE' bash -s" <<'EOF'
