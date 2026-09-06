@@ -1,6 +1,7 @@
 # System
 .DS_Store
 .idea
+__pycache__/
 
 # User
 examples/.env
