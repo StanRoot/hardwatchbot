@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 env:
@@ -13,6 +15,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     permissions:
       contents: read
@@ -44,7 +47,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=main
+            type=raw,value=latest
+            type=semver,pattern={{version}}
 
       - name: Build and push Docker image
         id: build-and-push
@@ -68,6 +72,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    timeout-minutes: 5
 
     steps:
       - name: Deploy to server
@@ -76,7 +81,7 @@ jobs:
           SSH_HOST: ${{ secrets.HOST_IP_MSKHUB }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
-          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
         run: |
           IMAGE="${IMAGE,,}"
@@ -87,11 +92,12 @@ jobs:
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
-          ssh-keyscan -p 21022 -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -T 10 -p 21022 -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
           echo "$GHCR_TOKEN" | ssh \
             -i ~/.ssh/id_ed25519 \
             -o IdentitiesOnly=yes \
+            -o ConnectTimeout=10 \
             -p 21022 \
             deployer@"$SSH_HOST" \
             "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
@@ -99,6 +105,7 @@ jobs:
           ssh \
             -i ~/.ssh/id_ed25519 \
             -o IdentitiesOnly=yes \
+            -o ConnectTimeout=10 \
             -p 21022 \
             deployer@"$SSH_HOST" \
             "IMAGE='$IMAGE' bash -s" <<'EOF'
@@ -106,11 +113,11 @@ jobs:
 
               docker pull "$IMAGE"
 
-              docker rm -f my-app 2>/dev/null || true
+              docker rm -f hardwatchbot 2>/dev/null || true
 
               docker run \
                 -d \
-                --name my-app \
+                --name hardwatchbot \
                 --restart unless-stopped \
                 "$IMAGE"
           EOF
