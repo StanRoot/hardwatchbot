@@ -2,8 +2,6 @@ name: DockerBuild
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -16,6 +14,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      digest: ${{ steps.build-and-push.outputs.digest }}
 
     permissions:
       contents: read
@@ -74,6 +74,10 @@ jobs:
     needs: build
     timeout-minutes: 5
 
+    concurrency:
+      group: hardwatchbot-production
+      cancel-in-progress: false
+
     steps:
       - name: Deploy to server
         env:
@@ -81,7 +85,7 @@ jobs:
           SSH_HOST: ${{ secrets.HOST_IP_MSKHUB }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
-          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}
 
         run: |
           IMAGE="${IMAGE,,}"
@@ -118,6 +122,7 @@ jobs:
               docker run \
                 -d \
                 --name hardwatchbot \
+                --network host \
                 --restart unless-stopped \
                 --env-file /etc/hardwatchbot/bot.env \
                 --mount type=bind,readonly,src=/etc/hardwatchbot/bot_token,dst=/run/secrets/bot_token \

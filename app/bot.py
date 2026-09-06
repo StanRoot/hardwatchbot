@@ -62,11 +62,12 @@ async def main() -> None:
     dispatcher = Dispatcher()
     dispatcher.include_router(create_router(settings))
 
-    await bot.set_my_commands(
-        [BotCommand(command="start", description="Запустить бота")]
-    )
-    logging.info("Starting HardWatchBot in polling mode")
-    await dispatcher.start_polling(bot)
+    async with bot.context():
+        await bot.set_my_commands(
+            [BotCommand(command="start", description="Запустить бота")]
+        )
+        logging.info("Starting HardWatchBot in polling mode")
+        await dispatcher.start_polling(bot, close_bot_session=False)
 
 
 if __name__ == "__main__":
