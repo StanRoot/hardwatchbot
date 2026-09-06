@@ -29,4 +29,4 @@ COPY --chown=bot:bot app ./app
 
 USER bot
 
-CMD ["python", "-m", "app.counter"]
+CMD ["python", "-m", "app.bot"]
