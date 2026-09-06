@@ -119,5 +119,7 @@ jobs:
                 -d \
                 --name hardwatchbot \
                 --restart unless-stopped \
+                --env-file /etc/hardwatchbot/bot.env \
+                --mount type=bind,readonly,src=/etc/hardwatchbot/bot_token,dst=/run/secrets/bot_token \
                 "$IMAGE"
           EOF

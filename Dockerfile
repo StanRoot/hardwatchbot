@@ -17,8 +17,13 @@ WORKDIR /opt/hardwatchbot
 COPY requirements.txt ./
 RUN pip install --no-cache-dir --requirement requirements.txt
 
-RUN addgroup --system bot \
-    && adduser --system --ingroup bot bot
+RUN addgroup --system --gid 10001 bot \
+    && adduser --system \
+        --uid 10001 \
+        --gid 10001 \
+        --no-create-home \
+        --disabled-login \
+        bot
 
 COPY --chown=bot:bot app ./app
 
