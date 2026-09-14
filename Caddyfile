@@ -1,0 +1,4 @@
+# example of file content
+status.example.com {
+    reverse_proxy uptime-kuma:3001
+}

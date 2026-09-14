@@ -1,0 +1,64 @@
+name: hardwatchbot
+
+services:
+  bot:
+    image: ${BOT_IMAGE:?Set BOT_IMAGE in .env}
+    container_name: hardwatchbot
+    restart: unless-stopped
+
+    env_file:
+      - path: /etc/hardwatchbot/bot.env
+        format: raw
+
+    volumes:
+      - type: bind
+        source: /etc/hardwatchbot/bot_token
+        target: /run/secrets/bot_token
+        read_only: true
+        bind:
+          create_host_path: false
+
+    networks:
+      - hardwatchbot-net
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "443:443/udp"
+
+    volumes:
+      - type: bind
+        source: ./Caddyfile
+        target: /etc/caddy/Caddyfile
+        read_only: true
+        bind:
+          create_host_path: false
+      - caddy_data:/data
+      - caddy_config:/config
+
+    networks:
+      - hardwatchbot-net
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    restart: unless-stopped
+
+    volumes:
+      - uptime_kuma_data:/app/data
+
+    networks:
+      - hardwatchbot-net
+
+networks:
+  hardwatchbot-net:
+    external: true
+    name: hardwatchbot-net
+
+volumes:
+  caddy_data:
+  caddy_config:
+  uptime_kuma_data:

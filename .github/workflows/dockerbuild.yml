@@ -74,6 +74,9 @@ jobs:
     needs: build
     timeout-minutes: 5
 
+    permissions:
+      packages: read
+
     concurrency:
       group: hardwatchbot-production
       cancel-in-progress: false
@@ -113,18 +116,21 @@ jobs:
             -p 21022 \
             deployer@"$SSH_HOST" \
             "IMAGE='$IMAGE' bash -s" <<'EOF'
-              set -e
+              set -euo pipefail
 
-              docker pull "$IMAGE"
+              cd /opt/hardwatchbot
+              export BOT_IMAGE="$IMAGE"
 
-              docker rm -f hardwatchbot 2>/dev/null || true
+              docker network inspect hardwatchbot-net >/dev/null
+              docker compose config --quiet
+              docker compose pull bot
 
-              docker run \
-                -d \
-                --name hardwatchbot \
-                --network hardwatchbot-net \
-                --restart unless-stopped \
-                --env-file /etc/hardwatchbot/bot.env \
-                --mount type=bind,readonly,src=/etc/hardwatchbot/bot_token,dst=/run/secrets/bot_token \
-                "$IMAGE"
+              # Persist the image digest for subsequent Compose commands.
+              umask 077
+              env_tmp="$(mktemp .env.XXXXXX)"
+              trap 'rm -f "$env_tmp"' EXIT
+              printf 'BOT_IMAGE=%s\n' "$BOT_IMAGE" > "$env_tmp"
+              mv "$env_tmp" .env
+
+              docker compose up -d --no-deps bot
           EOF
