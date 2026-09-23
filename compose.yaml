@@ -47,16 +47,47 @@ services:
     image: louislam/uptime-kuma:2
     restart: unless-stopped
 
+    depends_on:
+      - docker-socket-proxy
+
     volumes:
       - uptime_kuma_data:/app/data
 
     networks:
       - hardwatchbot-net
+      - docker-monitoring
+
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    restart: unless-stopped
+
+    # Read-only container API; other API sections stay disabled by default.
+    # This includes container metadata, not just health/status.
+    environment:
+      CONTAINERS: "1"
+      POST: "0"
+      EVENTS: "0"
+      PING: "0"
+      VERSION: "0"
+
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        read_only: true
+        bind:
+          create_host_path: false
+
+    # Do not publish ports or attach this service to hardwatchbot-net.
+    networks:
+      - docker-monitoring
 
 networks:
   hardwatchbot-net:
     external: true
     name: hardwatchbot-net
+  docker-monitoring:
+    internal: true
 
 volumes:
   caddy_data:

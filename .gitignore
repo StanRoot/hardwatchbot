@@ -4,6 +4,6 @@
 __pycache__/
 
 # User
-examples/.env
-.venv
-examples
+.venv/
+examples/
+assets/
