@@ -1,1 +1,1 @@
-"""Test package"""
+"""Bot APP package"""

@@ -43,13 +43,13 @@ def _parse_id_list(variable_name: str) -> frozenset[int]:
 
 
 @dataclass(frozen=True, slots=True)
-class Settings:
+class AppSettings:
     bot_token: str = field(repr=False)
     allowed_user_ids: frozenset[int]
     allowed_chat_ids: frozenset[int]
 
     @classmethod
-    def from_environment(cls) -> Settings:
+    def from_environment(cls) -> AppSettings:
         bot_token = _read_bot_token()
 
         allowed_user_ids = _parse_id_list("ALLOWED_USER_IDS")

@@ -3,58 +3,26 @@
 from __future__ import annotations
 
 import asyncio
-import html
 import logging
 
-from aiogram import Bot, Dispatcher, Router
+from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart
-from aiogram.types import BotCommand, Message
+from aiogram.types import BotCommand
 
-from app.config import Settings
+from app.settings.logger import setup_logging
+from app.settings.config import AppSettings
+from app.handlers.router import create_router
 
-
-def create_router(settings: Settings) -> Router:
-    """Create handlers that share the validated application settings."""
-    router = Router(name=__name__)
-
-    @router.message(CommandStart())
-    async def handle_start(message: Message) -> None:
-        user = message.from_user
-        if user is None:
-            return
-
-        user_id = user.id
-        if not settings.is_allowed(user_id=user_id, chat_id=message.chat.id):
-            logging.warning(
-                "Ignored /start from unauthorized user_id=%s chat_id=%s",
-                user_id,
-                message.chat.id,
-            )
-            return
-
-        display_name = html.escape(user.first_name)
-        premium_message = (
-            "О, у тебя есть премиум ;-)"
-            if user.is_premium
-            else "О, у тебя нет премиума, нищеброд =)"
-        )
-        await message.answer(
-            f"Привет, {display_name}! {premium_message}",
-        )
-
-    return router
+module_logger = logging.getLogger(__name__)
 
 
 async def main() -> None:
     """Configure the bot and start long polling."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-    )
 
-    settings = Settings.from_environment()
+    setup_logging()
+
+    settings = AppSettings.from_environment()
     bot = Bot(
         token=settings.bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
@@ -63,10 +31,12 @@ async def main() -> None:
     dispatcher.include_router(create_router(settings))
 
     async with bot.context():
-        await bot.set_my_commands(
-            [BotCommand(command="start", description="Запустить бота")]
-        )
-        logging.info("Starting HardWatchBot in polling mode")
+        await bot.set_my_commands([
+            BotCommand(command="start", description="Запустить бота"),
+            BotCommand(command="help", description="Помощь"),
+            BotCommand(command="about", description="О боте"),
+        ])
+        module_logger.info("Starting HardWatchBot in polling mode")
         await dispatcher.start_polling(bot, close_bot_session=False)
 
 
@@ -74,4 +44,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
-        logging.info("HardWatchBot stopped")
+        module_logger.info("HardWatchBot stopped")
